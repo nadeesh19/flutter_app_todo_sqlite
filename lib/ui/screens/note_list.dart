@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_app/models/note.dart';
 import 'package:flutter_app/ui/screens/note_details.dart';
 import 'package:flutter_app/utils/database_helper.dart';
+import 'package:sqflite/sqflite.dart';
 
 class NoteList extends StatefulWidget {
 
@@ -20,6 +21,7 @@ class _NoteListState extends State<NoteList> {
 
     if(noteList == null){
       noteList = List<Note>();
+      updateListView();
     }
 
     return Scaffold(
@@ -31,7 +33,7 @@ class _NoteListState extends State<NoteList> {
       floatingActionButton: FloatingActionButton(
         onPressed: () {
           debugPrint('======== FAB Button Tap');
-          navigateToNoteDetails('Add Note');
+          navigateToNoteDetails(Note('', '', 2), 'Add Note');
         },
 
         tooltip: 'Add Note ==========',
@@ -51,21 +53,25 @@ class _NoteListState extends State<NoteList> {
           elevation: 2.0,
           child: ListTile(
             leading: CircleAvatar(
-              backgroundColor: Colors.yellow,
-              child: Icon(Icons.keyboard_arrow_right),
+              backgroundColor: getPriorityColor(this.noteList[position].priority),
+              child: getPriorityIcon(this.noteList[position].priority),
             ),
-            title: Text(
-              'Dommy Title',
+            title: Text(this.noteList[position].title,
               style: titleStyle,
             ),
-            subtitle: Text('Dommy Date'),
-            trailing: Icon(
-              Icons.delete,
-              color: Colors.redAccent,
+            subtitle: Text(this.noteList[position].date),
+            trailing: GestureDetector(
+              child: Icon(
+                Icons.delete,
+                color: Colors.redAccent,
+              ),
+              onTap: () {
+                _delete(context, noteList[position]);
+              },
             ),
             onTap: () {
               debugPrint('============ List Tile Tapped');
-              navigateToNoteDetails('Edit Note');
+              navigateToNoteDetails(this.noteList[position], 'Edit Note');
             },
           ),
         );
@@ -109,6 +115,7 @@ class _NoteListState extends State<NoteList> {
     if(result != 0){
       _showSnackBar(context, 'Note Deleted successfully!');
       // TODO then Update the List View
+      updateListView();
     }
   }
 
@@ -117,11 +124,31 @@ class _NoteListState extends State<NoteList> {
     Scaffold.of(context).showSnackBar(snackbar);
   }
 
-  void navigateToNoteDetails(String title){
-    Navigator.push(context, MaterialPageRoute(builder: (context) {
-      return NoteDetails(title);
+  void navigateToNoteDetails(Note note, String title) async {
+    // waiting for response from NoteDetails page
+    bool result = await Navigator.push(context, MaterialPageRoute(builder: (context) {
+      return NoteDetails(note, title);
     }));
+
+    // anyway result is always true :)
+    if(result == true){
+      updateListView();
+    }
   }
 
+  void updateListView(){
+    final Future<Database> dbFuture = databaseHelper.initializeDatabase();
+    dbFuture.then((database) {
+
+      Future<List<Note>> noteListFuture = databaseHelper.getNoteList();
+      noteListFuture.then((noteList) {
+        setState(() {
+          this.noteList = noteList;
+          this.count = noteList.length;
+        });
+      });
+
+    });
+  }
 }
 

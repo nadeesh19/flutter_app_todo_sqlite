@@ -6,6 +6,10 @@ class Note {
   String _date;
   int _priority;
 
+
+  Note( this._title, this._date, this._priority, [this._description]);
+  Note.withId(this._id, this._title, this._date, this._priority, [this._description]);
+
   int get id => _id;
 
   String get title => _title;
